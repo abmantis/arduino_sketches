@@ -19,7 +19,6 @@
 #define SENSOR_ADT_PIN0 A0
 #define SENSOR_ADT_PIN1 A1
 
-#define NUM_READS 10    // Number of sensor reads for filtering
 #define CHILD_ID0 0
 #define CHILD_ID1 1
 
@@ -27,9 +26,6 @@ MyMessage msg0(CHILD_ID0, V_LEVEL);
 MyMessage msg1(CHILD_ID1, V_LEVEL);
 
 unsigned long SLEEP_TIME = 1800000; // Sleep time between reads (in milliseconds)
-
-long buffer[NUM_READS];
-int index;
 
 #ifdef DEBUG_LOGS
   #define LOG(msg) Serial.print(msg);
@@ -50,11 +46,11 @@ void presentation()
 }
 
 void loop() {
-  int humidity0 = sensorCycle(SENSOR_ADT_PIN0, SENSOR_VCC_PIN0);
+  int humidity0 = readSensor(SENSOR_ADT_PIN0, SENSOR_VCC_PIN0);
   LOG(humidity0);
   LOG("  ");
   
-  int humidity1 = sensorCycle(SENSOR_ADT_PIN1, SENSOR_VCC_PIN1);
+  int humidity1 = readSensor(SENSOR_ADT_PIN1, SENSOR_VCC_PIN1);
   LOG(humidity1);
   LOG("\n");
 
@@ -63,31 +59,33 @@ void loop() {
   
   sendBattery();
   
-  // delay until next measurement (msec)
   sleep(SLEEP_TIME);
 }
 
-int sensorCycle(int pin, int vccPin) {
+int readSensor(int pin, int vccPin) {
   digitalWrite(vccPin, HIGH);
-  delay(10);  
-  float humidity = readSensor(pin);
+  delay(10);
+
+  static int numReads = 10;
+  long sensorSum = 0;
+  for (int i = 0; i < numReads; ++i) {
+    sensorSum += analogRead(pin);
+  }
+  
+  long sensorAvg = (long)(sensorSum / numReads);
+  float humidity = map(sensorAvg, 0, 1023, 100, 0);
+  
   delay(10);
   digitalWrite(vccPin, LOW);
   
   return humidity;
 }
 
-int readSensor(int pin) {
-  int sensorValue = analogRead(pin);
-  // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-  //return sensorValue * (MAX_V / 1023.0);   
-  return map(sensorValue, 0, 1023, 100, 0);
-}
-
 void sendBattery()
 {
   static int oldBatteryPcnt = -10;
-  int batteryPcnt = min(map(readVcc(), MIN_V, MAX_V, 0, 100), 100); // Get VCC and convert to percentage      
+//  int batteryPcnt = min(map(readVcc(), MIN_V, MAX_V, 0, 100), 100); // Get VCC and convert to percentage
+  int batteryPcnt = map(readVcc(), MIN_V, MAX_V, 0, 100); // Get VCC and convert to percentage
   int oldToNew = oldBatteryPcnt - batteryPcnt;
 
   if (abs(oldToNew) > 3 ) { // If battery percentage has changed
