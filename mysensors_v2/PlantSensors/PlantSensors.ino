@@ -24,6 +24,8 @@
 
 MyMessage msg0(CHILD_ID0, V_LEVEL);
 MyMessage msg1(CHILD_ID1, V_LEVEL);
+MyMessage msg0Prefix(CHILD_ID0, V_UNIT_PREFIX);
+MyMessage msg1Prefix(CHILD_ID1, V_UNIT_PREFIX);
 
 unsigned long SLEEP_TIME = 1800000; // Sleep time between reads (in milliseconds)
 
@@ -36,11 +38,14 @@ unsigned long SLEEP_TIME = 1800000; // Sleep time between reads (in milliseconds
 void setup() {
   pinMode(SENSOR_VCC_PIN0, OUTPUT);
   pinMode(SENSOR_VCC_PIN1, OUTPUT);
+
+  send(msg0Prefix.set("%"));
+  send(msg1Prefix.set("%"));
 }
 
 void presentation()
 {
-  sendSketchInfo("Plant Sensors", "1.0");
+  sendSketchInfo("Plant Sensors", "1.1");
   present(CHILD_ID0, S_MOISTURE);
   present(CHILD_ID1, S_MOISTURE);
 }
@@ -53,7 +58,7 @@ void loop() {
   int humidity1 = readSensor(SENSOR_ADT_PIN1, SENSOR_VCC_PIN1);
   LOG(humidity1);
   LOG("\n");
-
+  
   send(msg0.set(humidity0));
   send(msg1.set(humidity1));
   
